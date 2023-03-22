@@ -50,6 +50,8 @@ func Middleware1() echo.MiddlewareFunc {
 			time.Sleep(100 * time.Millisecond)
 			c.Response().Header().Set("from-middleware1", fmt.Sprintf("::middleware1: %v", time.Now()))
 			ret := next(c)
+
+			// cost calculation ref to https://github.com/labstack/echo-contrib/blob/master/prometheus/prometheus.go
 			cost := time.Since(tstart).Milliseconds()
 			log.Printf("Middleware1 took %v", cost)
 			c.Response().Header().Set("from-middleware1-cost", fmt.Sprintf("%v", cost))
