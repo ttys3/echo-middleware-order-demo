@@ -23,9 +23,14 @@ func main() {
 	e.Use(Middleware3())
 	e.GET("/", func(c echo.Context) error {
 		time.Sleep(50 * time.Millisecond)
-		log.Print("::handler exec")
-		return c.String(http.StatusOK, "Hello, World!")
+		log.Print("/ ::handler exec")
+		return c.String(http.StatusOK, fmt.Sprintf("はじめまして, scheme:%v authority:%v", c.Scheme(), c.Request().Host))
 	})
+	e.GET("/foo", func(c echo.Context) error {
+		time.Sleep(150 * time.Millisecond)
+		log.Print("/foo ::handler exec")
+		return c.String(http.StatusOK, fmt.Sprintf("どうぞよろしくお願いします, scheme:%v authority:%v", c.Scheme(), c.Request().Host))
+	}, RouterSpecificMiddleware1(), RouterSpecificMiddleware2())
 	e.Logger.Fatal(e.Start(":1323"))
 }
 
@@ -91,6 +96,36 @@ func Middleware3() echo.MiddlewareFunc {
 	}
 }
 
+func RouterSpecificMiddleware1() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		// applyMiddleware() 的时候执行
+		log.Printf("RouterSpecificMiddleware1 wrap")
+		return func(c echo.Context) error {
+			log.Printf("::RouterSpecificMiddleware1 begin exec")
+			startTime := time.Now()
+			time.Sleep(300 * time.Millisecond)
+			ret := next(c)
+			log.Printf("RouterSpecificMiddleware1 took %v", time.Since(startTime).Milliseconds())
+			return ret
+		}
+	}
+}
+
+func RouterSpecificMiddleware2() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		// applyMiddleware() 的时候执行
+		log.Printf("RouterSpecificMiddleware2 wrap")
+		return func(c echo.Context) error {
+			log.Printf("::RouterSpecificMiddleware2 begin exec")
+			startTime := time.Now()
+			time.Sleep(600 * time.Millisecond)
+			ret := next(c)
+			log.Printf("RouterSpecificMiddleware2 took %v", time.Since(startTime).Milliseconds())
+			return ret
+		}
+	}
+}
+
 /*
 	e.findRouter(r.Host).Find(r.Method, GetPath(r), c)
 	h = c.Handler()
@@ -110,6 +145,7 @@ var handler = func(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
 }
 
+// wrap Middleware3
 var m3 = func() echo.HandlerFunc {
 	log.Printf("Middleware3 wrap")
 	// time.Sleep(810 * time.Millisecond)
@@ -120,6 +156,7 @@ var m3 = func() echo.HandlerFunc {
 	}
 }
 
+// wrap Middleware2
 var m2 = func() echo.HandlerFunc {
 	log.Printf("Middleware2 wrap")
 	// time.Sleep(810 * time.Millisecond)
@@ -130,15 +167,23 @@ var m2 = func() echo.HandlerFunc {
 	}
 }
 
+// wrap Middleware1
+var m1 = func() echo.HandlerFunc {
+	log.Printf("Middleware2 wrap")
+	// time.Sleep(810 * time.Millisecond)
+	return func(c echo.Context) error {
+		log.Printf("Middleware2 begin exec")
+		// time.Sleep(820 * time.Millisecond)
+		return m2()(c)
+	}
+}
+
 /*
-m3 {
-next: {
-m2 {
-next: {
-m1 {
-}
-}
-}
-}
-}
+m1{
+	m2{
+		m3{
+			handler()
+		}()
+	}()
+}()
 */
